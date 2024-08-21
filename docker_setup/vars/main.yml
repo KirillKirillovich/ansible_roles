@@ -1,2 +1,4 @@
 ---
-# vars file for docker_setup
+docker_version: "latest"
+docker_compose_version: "2.21.0"
+docker_compose_bin_path: /usr/local/bin/docker-compose

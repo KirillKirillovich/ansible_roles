@@ -1,48 +1,65 @@
 ---
-- name: update packets
+- name: Update APT package index
   apt:
     update_cache: yes
 
-- name: install ansible
+- name: Install required packages
   apt:
-    name: ansible
-    state: present
-    
-- name: Install Docker dependencies
-  apt:
-    name:
+    name: 
       - apt-transport-https
       - ca-certificates
       - curl
       - software-properties-common
     state: present
-    become: true
 
-- name: Add Docker GPG key
+- name: Add Docker's official GPG key
   apt_key:
     url: https://download.docker.com/linux/ubuntu/gpg
     state: present
-    become: true
 
-- name: Add Docker APT repository
+- name: Add Docker repository
   apt_repository:
     repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
     state: present
-    become: true
 
 - name: Install Docker
   apt:
-    name: docker-ce={{ docker_version }}
-    state: present
-    become: true
+    name: 
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: "{{ docker_version }}"
 
-- name: Ensure current user is in docker group
+- name: Ensure Docker service is running
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add current user to the docker group
   user:
-    name: ubuntu
+    name: "{{ ansible_user }}"
     groups: docker
     append: yes
-    become: true
 
 - name: Install Docker Compose
-  shell: curl -fsSL https://github.com/docker/compose/releases/{{ docker_compose_version }}/download/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
-  become: true
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-{{ ansible_system }}-{{ ansible_architecture }}"
+    dest: "{{ docker_compose_bin_path }}"
+    mode: '0755'
+
+- name: Check Docker version
+  command: docker --version
+  register: docker_version_output
+
+- name: Display Docker version
+  debug:
+    msg: "{{ docker_version_output.stdout }} installed"
+
+- name: Check Docker Compose version
+  command: docker-compose --version
+  register: docker_compose_version_output
+
+- name: Display Docker Compose version
+  debug:
+    msg: "{{ docker_compose_version_output.stdout }} installed"
